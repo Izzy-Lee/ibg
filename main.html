@@ -1,0 +1,930 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sleep Lumi | 라이프스타일 조명 스토어</title>
+<meta name="description" content="Sleep Lumi 라이프스타일 조명 스토어" />
+<!--
+  ═══════════════════════════════════════════════════════════════
+  2026 시·도 상업경진대회 [전자상거래실무] 제공 기초 파일
+  ⚠ 본 파일(main.html)은 수정 금지. 변경 시 실격 처리됩니다.
+  ═══════════════════════════════════════════════════════════════
+
+  ◆ 상세페이지(비번호.html) 연동 인터페이스
+
+  1. 파일 위치
+     수험자가 작성한 「비번호.html」 파일을 본 파일과 같은 폴더에
+     저장하면, 메인 화면의 [상세페이지 이동] 기능으로 연결됩니다.
+     (비번호 예시: 충북01.html — 시도 2글자 + 숫자 2자리)
+
+  2. 장바구니 카운트 연동 (선택 구현 요소)
+     본 쇼핑몰의 장바구니 수량은 아래 키로 공유됩니다.
+       localStorage 키: "nbo_cart_count"  (값: 정수 문자열)
+     상세페이지에서 장바구니 담기 시 이 키의 값을 증가시키면
+     메인 화면 우측 상단 장바구니 숫자에 그대로 반영됩니다.
+     예) localStorage.setItem('nbo_cart_count',
+           (parseInt(localStorage.getItem('nbo_cart_count'))||0) + 수량)
+     저장 기능이 차단된 환경에서는 0으로 표시되며 오류는 발생하지
+     않습니다.
+
+  3. 본 파일이 사용하는 localStorage 키 목록
+       nbo_cart_count : 장바구니 수량 (상세페이지와 공유)
+       nbo_wish       : 메인 찜 목록
+       nbo_user       : 로그인 데모 사용자명
+       nbo_coupon     : 쿠폰 발급 여부
+     ※ 헤더 [장바구니] → [데모 데이터 초기화]로 모두 지울 수
+        있습니다. (채점 시 답안 간 데이터 혼선 방지용)
+
+  ◆ 운영자(출제·감독) 참고
+     시도별 참가 인원이 변경될 경우, <script> 최상단의 VENUES
+     객체 숫자만 수정하면 됩니다. 비번호 체계가 변경될 경우
+     buildFilename() 함수 한 곳만 수정하면 됩니다.
+-->
+<style>
+  /* ── 디자인 토큰 : 상세페이지 제작 시 동일 토큰 사용을 권장 ── */
+  :root{
+    --black:#111;
+    --gray700:#444;
+    --gray500:#777;
+    --gray300:#d9d9d9;
+    --gray100:#f5f5f5;
+    --white:#fff;
+    --cream:#f7f2ea;
+    --warm:#efe1cd;
+    --amber:#d9903d;
+    --red:#e7472e;
+    --line:#e8e8e8;
+    --shadow:0 18px 45px rgba(0,0,0,.10);
+    --radius:22px;
+    --font:"Pretendard","Malgun Gothic","맑은 고딕","Apple SD Gothic Neo",system-ui,-apple-system,sans-serif;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font);color:var(--black);background:#fff;letter-spacing:-.025em;line-height:1.55}
+  a{text-decoration:none;color:inherit}
+  button{font:inherit;border:0;background:none;cursor:pointer;color:inherit}
+  ul{list-style:none}
+  .container{width:min(1440px,calc(100% - 40px));margin:auto}
+
+  /* ── 상단 띠 배너 ── */
+  .top-strip{height:38px;background:#111;color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center;gap:18px}
+  .top-strip b{color:#ffd59b}
+
+  /* ── 헤더 ── */
+  header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
+  .header-main{height:76px;display:grid;grid-template-columns:230px 1fr 320px;align-items:center;gap:26px}
+  .logo{font-size:28px;font-weight:900;letter-spacing:-.07em}
+  .logo span{font-size:13px;margin-left:6px;color:var(--amber);letter-spacing:.06em;vertical-align:middle}
+  .gnb{display:flex;gap:30px;font-weight:800;font-size:15px}
+  .gnb a{padding:27px 0;position:relative}
+  .gnb a:hover:after{content:"";position:absolute;left:0;right:0;bottom:18px;height:2px;background:#111}
+  .actions{display:flex;justify-content:flex-end;align-items:center;gap:14px;font-size:14px;font-weight:700}
+  .search{width:150px;height:38px;border-radius:999px;background:#f3f3f3;display:flex;align-items:center;padding:0 14px}
+  .search input{border:0;background:transparent;font:inherit;width:100%;outline:none}
+  .search input::placeholder{color:#999}
+  .icon{position:relative}
+  .count{position:absolute;right:-8px;top:-8px;background:#111;color:#fff;border-radius:50%;font-size:10px;min-width:17px;height:17px;padding:0 3px;display:grid;place-items:center}
+
+  /* ── 카테고리 바 ── */
+  .category-bar{border-bottom:1px solid var(--line);background:#fff}
+  .category-inner{height:48px;display:flex;align-items:center;justify-content:space-between;gap:18px}
+  .tabs{display:flex;gap:22px;overflow:auto;font-size:14px;font-weight:700;white-space:nowrap}
+  .tabs a.hot,.tabs button.hot{color:var(--red)}
+  .util-links{display:flex;gap:18px;color:#777;font-size:13px;white-space:nowrap}
+  .util-links button{font-weight:700;color:#777}
+  .util-links button:hover{color:#111}
+
+  /* ── 히어로 ── */
+  .hero{display:grid;grid-template-columns:1.2fr .8fr;height:620px;border-bottom:1px solid var(--line)}
+  .hero-left{position:relative;background:linear-gradient(135deg,#101010 0%,#242424 42%,#4b3b2b 100%);color:#fff;overflow:hidden;padding:70px min(7vw,90px)}
+  .hero-left:before{content:"";position:absolute;right:8%;top:13%;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(255,210,142,.55),rgba(255,210,142,.1) 45%,transparent 68%);filter:blur(4px)}
+  .hero-left:after{content:"";position:absolute;right:15%;bottom:10%;width:220px;height:260px;border-radius:120px 120px 36px 36px;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,.06));border:1px solid rgba(255,255,255,.2);box-shadow:0 30px 90px rgba(255,190,100,.18)}
+  .hero-copy{position:relative;z-index:1;max-width:620px}
+  .label{font-size:13px;font-weight:900;letter-spacing:.12em;color:#ffd89d;text-transform:uppercase}
+  .hero h1{margin-top:20px;font-size:clamp(48px,6vw,86px);line-height:1.16;font-weight:900;letter-spacing:-.08em}
+  .hero p{margin-top:24px;font-size:19px;color:rgba(255,255,255,.72);max-width:520px}
+  .hero-buttons{display:flex;gap:10px;margin-top:36px;flex-wrap:wrap}
+  .btn{height:48px;padding:0 22px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-weight:900}
+  .btn.dark{background:#111;color:#fff}
+  .btn.light{background:#fff;color:#111}
+  .btn.line{border:1px solid rgba(255,255,255,.35);color:#fff}
+
+  .hero-right{display:grid;grid-template-rows:1fr 1fr}
+  .promo{position:relative;padding:34px;background:var(--cream);overflow:hidden;border-left:1px solid var(--line);text-align:left;display:block;width:100%}
+  .promo:nth-child(2){background:#fff}
+  .promo h3{position:relative;z-index:1;font-size:31px;line-height:1.08;letter-spacing:-.06em}
+  .promo p{position:relative;z-index:1;margin-top:10px;color:#666;font-weight:600}
+  .promo .fake-product{position:absolute;right:34px;bottom:24px;width:155px;height:155px;border-radius:36px;background:radial-gradient(circle,rgba(217,144,61,.35),transparent 62%),linear-gradient(145deg,#fff,#e7d5bd);box-shadow:var(--shadow)}
+
+
+  /* ── 섹션 공통 ── */
+  section{padding:72px 0}
+  .section-title{display:flex;justify-content:space-between;align-items:end;margin-bottom:26px}
+  .section-title h2{font-size:34px;letter-spacing:-.06em;line-height:1.05}
+  .section-title p{color:#777;font-weight:600}
+  .more{font-size:14px;font-weight:900;text-decoration:underline;text-underline-offset:4px}
+
+  /* ── 상품 목록 ── */
+  .layout-shop{display:grid;grid-template-columns:220px 1fr;gap:30px}
+  .side{position:sticky;top:138px;align-self:start;border:1px solid var(--line);border-radius:20px;padding:20px;background:#fff}
+  .side h3{font-size:15px;margin-bottom:14px}
+  .side button{display:flex;justify-content:space-between;width:100%;padding:10px 0;border-bottom:1px solid #f1f1f1;font-size:14px;font-weight:700;color:#555;text-align:left}
+  .side button:last-child{border-bottom:0}
+  .side button.on{color:#111;font-weight:900}
+  .tool-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+  .filter-chips{display:flex;gap:8px;overflow:auto}
+  .chip{height:34px;padding:0 13px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:800;background:#fff;white-space:nowrap}
+  .chip.active{background:#111;color:#fff;border-color:#111}
+  .sort{font-size:13px;color:#777;font-weight:700}
+  .product-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px 16px}
+  .product{position:relative}
+  .product.hidden{display:none}
+  .thumb{height:315px;background:linear-gradient(145deg,#f4f4f4,#eee0ce);border-radius:4px;position:relative;overflow:hidden;display:grid;place-items:center}
+  .thumb:before{content:"";width:170px;height:170px;border-radius:50%;background:radial-gradient(circle,rgba(217,144,61,.35),transparent 65%)}
+  .thumb:after{content:"NO IMAGE";position:absolute;color:rgba(0,0,0,.24);font-weight:900;font-size:13px;letter-spacing:.12em}
+  .rank{position:absolute;left:0;top:0;background:#111;color:#fff;width:38px;height:38px;display:grid;place-items:center;font-size:15px;font-weight:900;z-index:2}
+  .badges{display:flex;gap:5px;margin-top:12px}
+  .mini-badge{border:1px solid #ddd;border-radius:3px;padding:2px 5px;font-size:10px;font-weight:900}
+  .mini-badge.sale{border-color:#ffb5a9;color:var(--red);background:#fff4f1}
+  .brand-name{margin-top:8px;font-size:13px;font-weight:900}
+  .product-name{margin-top:4px;font-size:14px;line-height:1.35;color:#333;min-height:38px}
+  .product-meta{display:flex;align-items:center;gap:7px;margin-top:8px;color:#777;font-size:12px}
+  .price{margin-top:8px;font-weight:900;font-size:17px}
+  .price del{font-size:12px;color:#aaa;margin-left:4px}
+  .discount{color:var(--red);margin-right:5px}
+  .heart{position:absolute;right:10px;top:10px;background:rgba(255,255,255,.92);width:34px;height:34px;border-radius:50%;display:grid;place-items:center;z-index:2;transition:.15s}
+  .heart.on{color:var(--red)}
+  .cart-hover{position:absolute;left:10px;right:10px;bottom:10px;height:42px;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;border-radius:3px;opacity:0;transform:translateY(8px);transition:.2s;z-index:3}
+  .product:hover .cart-hover{opacity:1;transform:translateY(0)}
+
+
+  /* 1위 자리: 수험자 상세페이지 진입 카드 */
+  .product.entry .thumb{background:#161616;cursor:pointer}
+  .product.entry .thumb:before{background:radial-gradient(circle,rgba(255,216,157,.5),transparent 65%)}
+  .product.entry .thumb:after{content:"NEW ARRIVAL";color:rgba(255,255,255,.55)}
+  .entry-overlay{position:absolute;inset:0;display:grid;place-items:center;z-index:1}
+  .entry-overlay div{text-align:center;color:#fff}
+  .entry-overlay b{display:block;font-size:18px;letter-spacing:-.03em}
+  .entry-overlay small{display:block;margin-top:6px;font-size:12px;color:rgba(255,255,255,.6);font-weight:700}
+
+  /* ── 기획전 ── */
+  .editorial{background:#f7f7f7}
+  .editorial-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px}
+  .ed-card{min-height:420px;background:#fff;position:relative;overflow:hidden;padding:36px;display:block;width:100%;text-align:left}
+  .ed-card.big{background:linear-gradient(135deg,#f3ece2,#d8c0a1)}
+  .ed-card.dark{background:#161616;color:#fff}
+  .ed-card h3{font-size:38px;line-height:1.3;letter-spacing:-.06em;position:relative;z-index:1}
+  .ed-card p{margin-top:14px;color:#666;font-weight:600;position:relative;z-index:1}
+  .ed-card.dark p{color:rgba(255,255,255,.65)}
+  .ed-card .shape{position:absolute;right:35px;bottom:25px;width:230px;height:230px;border-radius:50%;background:radial-gradient(circle,rgba(255,216,157,.6),transparent 68%)}
+
+  /* ── 후기 ── */
+  .review-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .review{border:1px solid var(--line);padding:22px;background:#fff}
+  .review.extra{display:none}
+  .reviews-expanded .review.extra{display:block}
+  .stars{font-size:13px;color:var(--amber);font-weight:900}
+  .review p{margin-top:12px;color:#444;font-size:14px}
+  .review b{display:block;margin-top:16px;font-size:13px}
+
+  /* ── 멤버십 ── */
+  .membership{background:#111;color:#fff}
+  .membership-box{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center}
+  .membership h2{font-size:42px;line-height:1.05;letter-spacing:-.06em}
+  .membership p{color:rgba(255,255,255,.65);margin-top:12px}
+  .membership .btn{background:#fff;color:#111}
+
+  /* ── 푸터 ── */
+  footer{background:var(--gray100);padding:42px 0;color:#777;font-size:13px}
+  .footer-note{line-height:1.8;color:#666;font-weight:600}
+  .footer-copy{margin-top:16px;padding-top:16px;border-top:1px solid var(--gray300);color:#999}
+
+  /* ── 모달 공통 ── */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:90;display:none;align-items:center;justify-content:center;padding:20px}
+  .modal-backdrop.show{display:flex}
+  .modal{background:#fff;border-radius:var(--radius);padding:34px;width:min(440px,100%);box-shadow:var(--shadow);max-height:85vh;overflow:auto}
+  .modal h3{font-size:22px;letter-spacing:-.05em}
+  .modal .desc{margin-top:8px;font-size:13px;color:#777;font-weight:600;line-height:1.6}
+  .modal label{display:block;margin-top:18px;font-size:13px;font-weight:900}
+  .modal select,.modal input[type=text]{width:100%;margin-top:8px;height:48px;border:1.5px solid var(--gray300);border-radius:12px;padding:0 14px;font:inherit;font-weight:700;background:#fff}
+  .modal select:focus,.modal input[type=text]:focus{outline:none;border-color:#111}
+  .modal-id-preview{margin-top:16px;padding:12px 16px;background:var(--gray100);border-radius:12px;font-size:13px;font-weight:700;color:#555}
+  .modal-id-preview b{color:#111;font-size:15px}
+  .modal-buttons{display:flex;gap:8px;margin-top:20px}
+  .modal-buttons .btn{flex:1;border-radius:12px}
+  .modal-buttons .btn.cancel{border:1.5px solid var(--gray300)}
+  .modal ul.notice-list li{padding:12px 0;border-bottom:1px solid var(--line);font-size:14px;font-weight:600;color:#444}
+  .modal ul.notice-list li small{display:block;color:#999;font-weight:600;margin-top:3px;font-size:12px}
+  .modal .cart-summary{margin-top:18px;padding:16px;background:var(--gray100);border-radius:12px;font-size:14px;font-weight:700}
+  .modal .cart-summary b{font-size:22px}
+  .modal .reset-link{margin-top:14px;font-size:12px;color:#999;text-decoration:underline;text-underline-offset:3px}
+  .modal .ship-result{margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:12px;font-size:13.5px;font-weight:700;color:#444;display:none}
+  .modal .ship-result.show{display:block}
+  .entry-template{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .template-link{display:flex;align-items:center;gap:8px;width:100%;justify-content:center;padding:11px 14px;border:1.5px dashed var(--gray300);border-radius:12px;font-size:13.5px;font-weight:800;color:#555}
+  .template-link:hover{border-color:#111;color:#111}
+  .template-link code{background:var(--gray100);border:1px solid var(--line);padding:2px 7px;border-radius:6px;font-weight:700}
+  .template-link .tag{margin-left:auto;background:var(--amber);color:#fff;font-size:11px;font-weight:900;padding:3px 8px;border-radius:999px;letter-spacing:.02em}
+
+  /* ── 토스트 ── */
+  .toast{position:fixed;left:50%;bottom:30px;transform:translate(-50%,20px);background:#111;color:#fff;padding:13px 22px;border-radius:999px;font-size:14px;font-weight:800;z-index:100;opacity:0;pointer-events:none;transition:.25s;box-shadow:0 14px 40px rgba(0,0,0,.3);max-width:calc(100% - 40px);text-align:center}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+
+  .mobile-buy{display:none}
+
+  /* ── 반응형 ── */
+  @media(max-width:1100px){
+    .header-main{grid-template-columns:180px 1fr 200px}
+    .gnb{gap:18px}
+    .product-grid{grid-template-columns:repeat(3,1fr)}
+    .review-grid{grid-template-columns:repeat(2,1fr)}
+  }
+  @media(max-width:860px){
+    .top-strip{font-size:12px}
+    .header-main{height:66px;display:flex;justify-content:space-between}
+    .gnb,.search,.side{display:none}
+    .category-inner{justify-content:space-between}
+    .hero{grid-template-columns:1fr;height:auto}
+    .hero-left{min-height:560px;padding:52px 24px}
+    .hero-right{grid-template-columns:1fr 1fr;grid-template-rows:auto}
+    .promo{min-height:220px}
+    .layout-shop{display:block}
+    .product-grid{grid-template-columns:repeat(2,1fr)}
+    .editorial-grid,.membership-box{grid-template-columns:1fr}
+    .review-grid{grid-template-columns:1fr}
+    .mobile-buy{display:flex;position:fixed;left:12px;right:12px;bottom:12px;z-index:60;height:54px;background:#111;color:#fff;border-radius:999px;align-items:center;justify-content:space-between;padding:0 20px;font-weight:900;box-shadow:0 14px 40px rgba(0,0,0,.24)}
+  }
+  @media(max-width:520px){
+    .container{width:calc(100% - 28px)}
+    .logo{font-size:22px}
+    .actions{gap:10px}
+    .category-inner{height:44px}
+    .tabs{gap:16px}
+    .hero h1{font-size:43px}
+    .hero p{font-size:16px}
+    .hero-right{grid-template-columns:1fr}
+    .product-grid{grid-template-columns:1fr}
+    .thumb{height:330px}
+    .section-title{display:block}
+    .section-title p{margin-top:8px}
+    .ed-card h3{font-size:30px}
+    .membership h2{font-size:32px}
+  }
+</style>
+</head>
+<body>
+  <div class="top-strip">신규 회원 가입 즉시 <b>웰컴 쿠폰</b> 증정 · 당일 출고 · 빠른 배송</div>
+
+  <header>
+    <div class="container header-main">
+      <a href="#" class="logo" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">Sleep Lumi <span>STORE</span></a>
+      <nav class="gnb" aria-label="주요 메뉴">
+        <a href="#products">전체상품</a><a href="#editorial">기획전</a><a href="#reviews">후기</a><a href="#membership">혜택</a>
+      </nav>
+      <div class="actions">
+        <div class="search"><input type="text" id="searchInput" placeholder="상품 검색" oninput="applyProductView()" aria-label="상품 검색"></div>
+        <button type="button" id="loginBtn" onclick="toggleLogin()">로그인</button>
+        <button type="button" class="icon" onclick="openCartModal()">장바구니<span class="count" id="cartCount">0</span></button>
+      </div>
+    </div>
+    <div class="category-bar">
+      <div class="container category-inner">
+        <div class="tabs">
+          <button type="button" class="hot" onclick="filterAndGo('SALE')">오늘의 특가</button>
+          <button type="button" onclick="filterAndGo('전체')">베스트</button>
+          <button type="button" onclick="sortAndGo('new')">신상품</button>
+          <a href="#editorial">기획전</a>
+          <a href="#reviews">리뷰</a>
+          <button type="button" onclick="filterAndGo('선물세트')">선물세트</button>
+        </div>
+        <div class="util-links">
+          <button type="button" onclick="openNoticeModal()">공지사항</button>
+          <button type="button" onclick="openShipModal()">배송조회</button>
+          <button type="button" onclick="openEntryModal()">상세페이지 이동</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- 히어로 : 브랜드 무드 카피만 사용 (상품 기능·타겟 정보 없음) -->
+    <section class="hero">
+      <div class="hero-left">
+        <div class="hero-copy">
+          <div class="label">LIGHT &amp; LIFESTYLE</div>
+          <h1>이번 주<br>신상품</h1>
+          <p>새로 입점한 상품을 상세페이지에서 확인하세요.</p>
+          <div class="hero-buttons">
+            <button class="btn light" type="button" onclick="openEntryModal()">신상품 상세 보기</button>
+            <a class="btn line" href="#products">전체 상품 보기</a>
+          </div>
+        </div>
+      </div>
+      <div class="hero-right">
+        <button type="button" class="promo" onclick="sortAndGo('sales')"><h3>WEEKLY<br>BEST 20</h3><p>이번 주 가장 많이 담긴 조명</p><div class="fake-product"></div></button>
+        <button type="button" class="promo" onclick="claimCoupon()"><h3>NEW MEMBER<br>COUPON</h3><p>첫 구매 회원 전용 할인</p><div class="fake-product"></div></button>
+      </div>
+    </section>
+
+
+    <!-- 상품 목록 : 1위 자리는 수험자 상세페이지 진입 카드 (필터·정렬에서 항상 첫 번째 고정) -->
+    <section id="products" class="container">
+      <div class="section-title">
+        <div><h2>Ranking &amp; Best</h2><p>이번 주 인기 조명을 모았습니다.</p></div>
+        <button type="button" class="more" onclick="resetProductView()">전체보기</button>
+      </div>
+      <div class="layout-shop">
+        <aside class="side" id="categorySide">
+          <h3>카테고리</h3>
+          <!-- 개수는 JS가 실제 상품 수로 갱신 -->
+          <button type="button" class="on" data-cat="전체">전체 <span>-</span></button>
+          <button type="button" data-cat="침실 조명">침실 조명 <span>-</span></button>
+          <button type="button" data-cat="무선 조명">무선 조명 <span>-</span></button>
+          <button type="button" data-cat="책상/독서등">책상/독서등 <span>-</span></button>
+          <button type="button" data-cat="아이방 조명">아이방 조명 <span>-</span></button>
+          <button type="button" data-cat="선물세트">선물세트 <span>-</span></button>
+        </aside>
+        <div>
+          <div class="tool-row">
+            <div class="filter-chips" id="sortChips">
+              <button class="chip active" data-sort="rank">추천순</button>
+              <button class="chip" data-sort="sales">판매량순</button>
+              <button class="chip" data-sort="reviews">리뷰 많은순</button>
+              <button class="chip" data-sort="price">낮은 가격순</button>
+              <button class="chip" data-sort="new">신상품</button>
+            </div>
+            <div class="sort" id="productCount">-</div>
+          </div>
+          <div class="product-grid" id="productGrid">
+            <!-- 1위 : 신상품(수험자 작성 상세페이지) 진입 카드 — 항상 노출 -->
+            <article class="product entry" id="entryCard">
+              <span class="rank">1</span>
+              <div class="thumb" onclick="openEntryModal()" role="button" aria-label="신상품 상세페이지로 이동">
+                <div class="entry-overlay"><div><b>이번 주 신상품</b><small>클릭하여 상세페이지 보기</small></div></div>
+              </div>
+              <div class="badges"><span class="mini-badge sale">NEW</span><span class="mini-badge">BEST</span></div>
+              <div class="brand-name">SLEEP LUMI</div>
+              <div class="product-name">신상품 입점 — 상세페이지에서 확인하세요</div>
+              <div class="product-meta">★ 신규 등록 상품</div>
+              <div class="price">상세페이지 참조</div>
+            </article>
+
+            <article class="product" data-id="p2" data-cat="침실 조명" data-price="32500" data-reviews="862" data-sales="1840" data-rank="2" data-new="0" data-sale="0">
+              <span class="rank">2</span>
+              <button class="heart" type="button" aria-label="찜하기">♡</button>
+              <div class="thumb"><button class="cart-hover" type="button">장바구니 담기</button></div>
+              <div class="badges"><span class="mini-badge">BEST</span><span class="mini-badge">오늘출발</span></div>
+              <div class="brand-name">SLEEP LUMI</div>
+              <div class="product-name">우드 베이스 스탠드 조명</div>
+              <div class="product-meta">★ 4.8 · 리뷰 862</div>
+              <div class="price"><span class="discount">24%</span>32,500원 <del>42,800원</del></div>
+            </article>
+
+            <article class="product" data-id="p3" data-cat="침실 조명" data-price="18900" data-reviews="534" data-sales="1325" data-rank="3" data-new="0" data-sale="1">
+              <span class="rank">3</span>
+              <button class="heart" type="button" aria-label="찜하기">♡</button>
+              <div class="thumb"><button class="cart-hover" type="button">장바구니 담기</button></div>
+              <div class="badges"><span class="mini-badge sale">SALE</span></div>
+              <div class="brand-name">SLEEP LUMI</div>
+              <div class="product-name">미니멀 테이블 램프</div>
+              <div class="product-meta">★ 4.7 · 리뷰 534</div>
+              <div class="price"><span class="discount">41%</span>18,900원 <del>32,000원</del></div>
+            </article>
+
+            <article class="product" data-id="p4" data-cat="선물세트" data-price="39800" data-reviews="421" data-sales="980" data-rank="4" data-new="0" data-sale="0">
+              <span class="rank">4</span>
+              <button class="heart" type="button" aria-label="찜하기">♡</button>
+              <div class="thumb"><button class="cart-hover" type="button">장바구니 담기</button></div>
+              <div class="badges"><span class="mini-badge">GIFT</span></div>
+              <div class="brand-name">SLEEP LUMI</div>
+              <div class="product-name">선물용 패키지 조명 세트</div>
+              <div class="product-meta">★ 4.9 · 리뷰 421</div>
+              <div class="price">39,800원</div>
+            </article>
+
+            <article class="product" data-id="p5" data-cat="아이방 조명" data-price="24900" data-reviews="719" data-sales="1510" data-rank="5" data-new="0" data-sale="1">
+              <span class="rank">5</span>
+              <button class="heart" type="button" aria-label="찜하기">♡</button>
+              <div class="thumb"><button class="cart-hover" type="button">장바구니 담기</button></div>
+              <div class="badges"><span class="mini-badge">KIDS</span></div>
+              <div class="brand-name">SLEEP LUMI</div>
+              <div class="product-name">아이방 실리콘 터치 조명</div>
+              <div class="product-meta">★ 4.8 · 리뷰 719</div>
+              <div class="price"><span class="discount">18%</span>24,900원 <del>30,500원</del></div>
+            </article>
+
+            <article class="product" data-id="p6" data-cat="무선 조명" data-price="58000" data-reviews="188" data-sales="420" data-rank="6" data-new="0" data-sale="0">
+              <span class="rank">6</span>
+              <button class="heart" type="button" aria-label="찜하기">♡</button>
+              <div class="thumb"><button class="cart-hover" type="button">장바구니 담기</button></div>
+              <div class="badges"><span class="mini-badge">PREMIUM</span></div>
+              <div class="brand-name">SLEEP LUMI</div>
+              <div class="product-name">프리미엄 메탈 스탠드 조명</div>
+              <div class="product-meta">★ 4.6 · 리뷰 188</div>
+              <div class="price">58,000원</div>
+            </article>
+
+            <article class="product" data-id="p7" data-cat="무선 조명" data-price="21300" data-reviews="306" data-sales="740" data-rank="7" data-new="0" data-sale="1">
+              <span class="rank">7</span>
+              <button class="heart" type="button" aria-label="찜하기">♡</button>
+              <div class="thumb"><button class="cart-hover" type="button">장바구니 담기</button></div>
+              <div class="badges"><span class="mini-badge sale">SALE</span></div>
+              <div class="brand-name">SLEEP LUMI</div>
+              <div class="product-name">캠핑 겸용 충전식 미니 랜턴</div>
+              <div class="product-meta">★ 4.7 · 리뷰 306</div>
+              <div class="price"><span class="discount">29%</span>21,300원 <del>30,000원</del></div>
+            </article>
+
+            <article class="product" data-id="p8" data-cat="책상/독서등" data-price="29800" data-reviews="277" data-sales="660" data-rank="8" data-new="1" data-sale="0">
+              <span class="rank">8</span>
+              <button class="heart" type="button" aria-label="찜하기">♡</button>
+              <div class="thumb"><button class="cart-hover" type="button">장바구니 담기</button></div>
+              <div class="badges"><span class="mini-badge">NEW</span></div>
+              <div class="brand-name">SLEEP LUMI</div>
+              <div class="product-name">책상 위 포인트 LED 조명</div>
+              <div class="product-meta">★ 4.8 · 리뷰 277</div>
+              <div class="price">29,800원</div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 기획전 : 클릭 시 해당 카테고리 필터 적용 -->
+    <section id="editorial" class="editorial">
+      <div class="container">
+        <div class="section-title">
+          <div><h2>Editorial Picks</h2><p>카테고리별 상품 모음입니다.</p></div>
+          <button type="button" class="more" onclick="filterAndGo('전체')">기획전 전체보기</button>
+        </div>
+        <div class="editorial-grid">
+          <button type="button" class="ed-card big" onclick="filterAndGo('침실 조명')"><h3>침실 조명<br>모아보기</h3><p>침실용 조명 카테고리로 이동</p><div class="shape"></div></button>
+          <button type="button" class="ed-card dark" onclick="filterAndGo('책상/독서등')"><h3>책상·독서등<br>모아보기</h3><p>책상/독서 카테고리로 이동</p><div class="shape"></div></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 후기 : 더보기 시 추가 후기 노출 -->
+    <section id="reviews" class="container">
+      <div class="section-title">
+        <div><h2>Real Review</h2><p>먼저 구매한 분들의 이야기입니다.</p></div>
+        <button type="button" class="more" id="moreReviewsBtn" onclick="toggleReviews()">후기 더보기</button>
+      </div>
+      <div class="review-grid" id="reviewGrid">
+        <div class="review"><div class="stars">★★★★★</div><p>주문 다음 날 바로 도착했어요. 포장이 꼼꼼해서 선물용으로도 안심하고 보낼 수 있을 것 같습니다.</p><b>김** · 배송 만족</b></div>
+        <div class="review"><div class="stars">★★★★★</div><p>사진보다 실물 마감이 더 좋습니다. 문의 남겼을 때 답변도 빨라서 믿음이 갔어요.</p><b>이** · 상품 품질</b></div>
+        <div class="review"><div class="stars">★★★★☆</div><p>선물 포장 옵션이 깔끔해서 집들이 선물로 좋았습니다. 가격도 부담 없어요.</p><b>박** · 선물 구매</b></div>
+        <div class="review"><div class="stars">★★★★★</div><p>교환 문의를 드렸는데 처리가 빨랐습니다. 다음에도 여기서 구매할 생각입니다.</p><b>최** · 고객 응대</b></div>
+        <div class="review extra"><div class="stars">★★★★★</div><p>두 번째 구매입니다. 박스 손상 없이 안전하게 왔고 적립금도 바로 들어왔어요.</p><b>정** · 재구매</b></div>
+        <div class="review extra"><div class="stars">★★★★☆</div><p>배송 조회가 실시간으로 잘 떠서 받는 날짜 맞추기 편했습니다.</p><b>한** · 배송 만족</b></div>
+        <div class="review extra"><div class="stars">★★★★★</div><p>고객센터 연결이 빨라요. 영수증 재발급도 바로 처리해 주셨습니다.</p><b>오** · 고객 응대</b></div>
+        <div class="review extra"><div class="stars">★★★★★</div><p>재고가 빨리 빠진다더니 바로 받아봐서 좋았어요. 다음에도 이용할게요.</p><b>윤** · 재구매</b></div>
+      </div>
+    </section>
+
+    <section id="membership" class="membership">
+      <div class="container membership-box">
+        <div>
+          <h2>첫 구매라면<br>더 가볍게 시작하세요.</h2>
+          <p>회원가입 혜택과 다양한 이벤트가 준비되어 있습니다.</p>
+        </div>
+        <button type="button" class="btn" onclick="claimCoupon()">회원 혜택 받기</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <!-- [제2과제 문제6] 하단 메뉴와 사업자 필수 정보는 수험자가 상세페이지에서 직접 구현하는 항목이므로 메인에는 노출하지 않습니다. -->
+      <p class="footer-note">쇼핑몰 하단 메뉴와 사업자 필수 정보는 [제2과제] 상세페이지에서 직접 구현하는 항목입니다.</p>
+             <p class="footer-copy">Copyright ⓒ Sleep Lumi. 본 페이지는 2026 시·도 상업경진대회 실습용 예시 쇼핑몰입니다.</p>
+    </div>
+  </footer>
+
+  <button class="mobile-buy" type="button" onclick="openEntryModal()"><span>신상품 상세페이지 보기</span><span>→</span></button>
+
+  <!-- 상세페이지 이동 모달 -->
+  <div class="modal-backdrop" id="entryModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="entryTitle">
+      <h3 id="entryTitle">상세페이지 이동</h3>
+      <p class="desc">비번호를 입력하면 같은 폴더의 「비번호.html」 상세페이지로 이동합니다.</p>
+      <label for="bunho">비번호</label>
+      <input type="text" id="bunho" placeholder="예: 강원01" autocomplete="off" inputmode="text">
+      <div class="modal-id-preview">이동할 파일: <b id="idPreview">-</b></div>
+      <div class="modal-buttons">
+        <button class="btn cancel" type="button" onclick="closeModal('entryModal')">취소</button>
+        <button class="btn dark" type="button" onclick="goDetail()">이동</button>
+      </div>
+      <div class="entry-template">
+        <button type="button" class="template-link" onclick="openTemplate()">
+          제시 양식 미리보기 <code>product.html</code><span class="tag">제시양식</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 장바구니 모달 -->
+  <div class="modal-backdrop" id="cartModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cartTitle">
+      <h3 id="cartTitle">장바구니</h3>
+      <p class="desc">메인 화면과 상세페이지의 장바구니 수량은 함께 집계됩니다.</p>
+      <div class="cart-summary">담긴 상품 <b id="cartModalCount">0</b> 개</div>
+      <div class="modal-buttons">
+        <button class="btn cancel" type="button" onclick="closeModal('cartModal')">닫기</button>
+        <button class="btn dark" type="button" onclick="closeModal('cartModal');toast('주문서 작성 화면은 본 대회 범위가 아닙니다.')">주문하기</button>
+      </div>
+      <button type="button" class="reset-link" onclick="resetDemoData()">데모 데이터 초기화 (장바구니·찜·로그인·쿠폰)</button>
+    </div>
+  </div>
+
+  <!-- 공지사항 모달 -->
+  <div class="modal-backdrop" id="noticeModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="noticeTitle">
+      <h3 id="noticeTitle">공지사항</h3>
+      <ul class="notice-list">
+        <li>6월 둘째 주 배송 일정 안내<small>2026.06.08</small></li>
+        <li>여름맞이 기획전 안내<small>2026.06.01</small></li>
+        <li>신규 입점 브랜드 안내<small>2026.05.25</small></li>
+      </ul>
+      <div class="modal-buttons">
+        <button class="btn dark" type="button" onclick="closeModal('noticeModal')">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 배송조회 모달 -->
+  <div class="modal-backdrop" id="shipModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="shipTitle">
+      <h3 id="shipTitle">배송조회</h3>
+      <p class="desc">주문번호를 입력하면 배송 상태를 조회합니다.</p>
+      <label for="shipInput">주문번호</label>
+      <input type="text" id="shipInput" placeholder="예: 20260608-0001">
+      <div class="ship-result" id="shipResult"></div>
+      <div class="modal-buttons">
+        <button class="btn cancel" type="button" onclick="closeModal('shipModal')">닫기</button>
+        <button class="btn dark" type="button" onclick="trackShipment()">조회</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    'use strict';
+
+    /* ═══════════════════════════════════════════════════════════
+       [운영 설정] 시도별 참가 인원
+       - 인원이 변경되면 아래 숫자만 수정하면 됩니다.
+       - 비번호 = 시도 2글자 + 숫자 2자리 (예: 충북01)
+       ═══════════════════════════════════════════════════════════ */
+    var VENUES = {
+      '강원': 9,  '경기': 8,  '경남': 3,  '경북': 20,
+      '대구': 16, '대전': 16, '부산': 24, '서울': 3,
+      '세종': 20, '전남': 19, '전북': 9,  '충남': 9,
+      '충북': 14
+    };
+
+    /* 비번호 체계가 변경될 경우 이 함수만 수정 (현재: 시도 2글자 + 숫자 2자리, 예 강원01) */
+    function buildFilename(bunho){
+      return bunho + '.html';
+    }
+    /* 입력값 정규화: 공백 제거 + 숫자 2자리 패딩 (강원1 → 강원01) */
+    function normalizeBunho(raw){
+      var s = (raw || '').replace(/\s+/g, '');
+      var m = s.match(/^([가-힣]{2})(\d{1,2})$/);
+      if (!m) return null;
+      return m[1] + m[2].padStart(2, '0');
+    }
+
+    /* ── 저장소 접근 (차단 환경에서도 오류 없이 동작) ── */
+    function safeGet(key){ try { return localStorage.getItem(key); } catch (e) { return null; } }
+    function safeSet(key, val){ try { localStorage.setItem(key, val); } catch (e) { /* 무시 */ } }
+    function safeDel(key){ try { localStorage.removeItem(key); } catch (e) { /* 무시 */ } }
+
+    /* ── 토스트 알림 ── */
+    var toastTimer = null;
+    function toast(msg){
+      var el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 2200);
+    }
+
+    /* ── 모달 공통 ── */
+    function openModal(id){ document.getElementById(id).classList.add('show'); }
+    function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+    document.addEventListener('keydown', function(e){
+      if (e.key !== 'Escape') return;
+      var open = document.querySelectorAll('.modal-backdrop.show');
+      for (var i = 0; i < open.length; i++) open[i].classList.remove('show');
+    });
+    (function bindBackdropClose(){
+      var backs = document.querySelectorAll('.modal-backdrop');
+      for (var i = 0; i < backs.length; i++) {
+        backs[i].addEventListener('click', function(e){
+          if (e.target === this) this.classList.remove('show');
+        });
+      }
+    })();
+
+    /* ═══════════════════════════════════════════════════════════
+       장바구니 — 상세페이지(비번호.html)와 'nbo_cart_count' 키 공유
+       ═══════════════════════════════════════════════════════════ */
+    function getCartCount(){
+      var n = parseInt(safeGet('nbo_cart_count'), 10);
+      return isNaN(n) || n < 0 ? 0 : n;
+    }
+    function renderCartCount(){
+      var n = getCartCount();
+      document.getElementById('cartCount').textContent = n > 99 ? '99+' : n;
+      document.getElementById('cartModalCount').textContent = n;
+    }
+    function addToCart(productName){
+      safeSet('nbo_cart_count', getCartCount() + 1);
+      renderCartCount();
+      toast('장바구니에 담았습니다 · ' + productName);
+    }
+    function openCartModal(){ renderCartCount(); openModal('cartModal'); }
+
+    /* 다른 페이지(상세페이지)에서 담은 수량이 돌아왔을 때 즉시 반영 */
+    window.addEventListener('focus', renderCartCount);
+    window.addEventListener('pageshow', renderCartCount);
+
+    /* ═══════════════════════════════════════════════════════════
+       찜하기 — 메인 화면 찜 목록 (nbo_wish)
+       ═══════════════════════════════════════════════════════════ */
+    function getWish(){
+      var raw = safeGet('nbo_wish');
+      if (!raw) return [];
+      try { var v = JSON.parse(raw); return Array.isArray(v) ? v : []; } catch (e) { return []; }
+    }
+    function toggleWish(id, btn, name){
+      var wish = getWish();
+      var idx = wish.indexOf(id);
+      if (idx >= 0) {
+        wish.splice(idx, 1);
+        btn.textContent = '♡'; btn.classList.remove('on');
+        toast('찜을 해제했습니다 · ' + name);
+      } else {
+        wish.push(id);
+        btn.textContent = '♥'; btn.classList.add('on');
+        toast('찜 목록에 추가했습니다 · ' + name);
+      }
+      safeSet('nbo_wish', JSON.stringify(wish));
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       로그인 (데모) — nbo_user
+       ═══════════════════════════════════════════════════════════ */
+    function renderLogin(){
+      var u = safeGet('nbo_user');
+      document.getElementById('loginBtn').textContent = u ? (u + '님 · 로그아웃') : '로그인';
+    }
+    function toggleLogin(){
+      var u = safeGet('nbo_user');
+      if (u) {
+        safeDel('nbo_user');
+        renderLogin();
+        toast('로그아웃 되었습니다.');
+        return;
+      }
+      var name = window.prompt('로그인할 이름을 입력하세요. (데모)');
+      if (name && name.trim()) {
+        safeSet('nbo_user', name.trim());
+        renderLogin();
+        toast(name.trim() + '님, 환영합니다!');
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       쿠폰 발급 (데모) — nbo_coupon
+       ═══════════════════════════════════════════════════════════ */
+    function claimCoupon(){
+      if (safeGet('nbo_coupon')) { toast('이미 발급받은 쿠폰이 있습니다.'); return; }
+      safeSet('nbo_coupon', '1');
+      toast('신규 회원 웰컴 쿠폰이 발급되었습니다!');
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       상품 목록 — 검색 + 카테고리 필터 + 정렬
+       (1위 신상품 진입 카드는 항상 첫 번째 고정)
+       ═══════════════════════════════════════════════════════════ */
+    var currentCat = '전체';
+    var currentSort = 'rank';
+    var grid = document.getElementById('productGrid');
+    var entryCard = document.getElementById('entryCard');
+
+    function getCards(){
+      return Array.prototype.slice.call(grid.querySelectorAll('.product:not(.entry)'));
+    }
+
+    function applyProductView(){
+      var q = document.getElementById('searchInput').value.trim().toLowerCase();
+      var cards = getCards();
+
+      /* 정렬 */
+      cards.sort(function(a, b){
+        var ka, kb;
+        switch (currentSort) {
+          case 'sales':   ka = -(+a.dataset.sales);   kb = -(+b.dataset.sales);   break;
+          case 'reviews': ka = -(+a.dataset.reviews); kb = -(+b.dataset.reviews); break;
+          case 'price':   ka = +a.dataset.price;      kb = +b.dataset.price;      break;
+          case 'new':     ka = -(+a.dataset.new);     kb = -(+b.dataset.new);     break;
+          default:        ka = +a.dataset.rank;       kb = +b.dataset.rank;
+        }
+        return ka === kb ? (+a.dataset.rank) - (+b.dataset.rank) : (ka < kb ? -1 : 1);
+      });
+
+      /* 필터 + 재배치 (진입 카드는 항상 첫 번째) */
+      var visible = 0;
+      for (var i = 0; i < cards.length; i++) {
+        var c = cards[i];
+        var name = c.querySelector('.product-name').textContent.toLowerCase();
+        var catOk = (currentCat === '전체') ||
+                    (currentCat === 'SALE' ? c.dataset.sale === '1' : c.dataset.cat === currentCat);
+        var qOk = !q || name.indexOf(q) >= 0;
+        c.classList.toggle('hidden', !(catOk && qOk));
+        if (catOk && qOk) visible++;
+        grid.appendChild(c);
+      }
+
+      /* 진입 카드: 검색어가 있고 매칭되지 않으면 숨김, 그 외 항상 노출 */
+      var entryName = entryCard.querySelector('.product-name').textContent.toLowerCase();
+      var entryShow = !q || entryName.indexOf(q) >= 0;
+      entryCard.classList.toggle('hidden', !entryShow);
+      if (entryShow) visible++;
+
+      document.getElementById('productCount').textContent = '총 ' + visible + '개 상품';
+      renumberRanks();
+    }
+
+    function renumberRanks(){
+      var all = grid.querySelectorAll('.product:not(.hidden)');
+      for (var i = 0; i < all.length; i++) {
+        all[i].querySelector('.rank').textContent = i + 1;
+      }
+    }
+
+    function setCategory(cat){
+      currentCat = cat;
+      var btns = document.querySelectorAll('#categorySide button');
+      for (var i = 0; i < btns.length; i++) {
+        btns[i].classList.toggle('on', btns[i].dataset.cat === cat);
+      }
+      applyProductView();
+    }
+
+    function setSort(sort){
+      currentSort = sort;
+      var chips = document.querySelectorAll('#sortChips .chip');
+      for (var i = 0; i < chips.length; i++) {
+        chips[i].classList.toggle('active', chips[i].dataset.sort === sort);
+      }
+      applyProductView();
+    }
+
+    function resetProductView(){
+      document.getElementById('searchInput').value = '';
+      currentCat = '전체';
+      setCategory('전체');
+      setSort('rank');
+    }
+
+    function filterAndGo(cat){
+      setCategory(cat);
+      location.hash = '#products';
+      if (cat === 'SALE') toast('오늘의 특가(SALE) 상품만 표시합니다.');
+    }
+    function sortAndGo(sort){
+      setSort(sort);
+      location.hash = '#products';
+    }
+
+    /* 카테고리/정렬/카드 버튼 이벤트 바인딩 */
+    (function bindProductEvents(){
+      var catBtns = document.querySelectorAll('#categorySide button');
+      for (var i = 0; i < catBtns.length; i++) {
+        catBtns[i].addEventListener('click', function(){ setCategory(this.dataset.cat); });
+      }
+      var chips = document.querySelectorAll('#sortChips .chip');
+      for (var j = 0; j < chips.length; j++) {
+        chips[j].addEventListener('click', function(){ setSort(this.dataset.sort); });
+      }
+      var cards = getCards();
+      var wish = getWish();
+      for (var k = 0; k < cards.length; k++) {
+        (function(card){
+          var id = card.dataset.id;
+          var name = card.querySelector('.product-name').textContent;
+          var heart = card.querySelector('.heart');
+          if (wish.indexOf(id) >= 0) { heart.textContent = '♥'; heart.classList.add('on'); }
+          heart.addEventListener('click', function(){ toggleWish(id, heart, name); });
+          card.querySelector('.cart-hover').addEventListener('click', function(){ addToCart(name); });
+        })(cards[k]);
+      }
+      /* 사이드 카테고리 실제 개수 표시 (진입 카드는 전체에만 포함) */
+      var counts = {'전체': cards.length + 1};
+      for (var m = 0; m < cards.length; m++) {
+        var c = cards[m].dataset.cat;
+        counts[c] = (counts[c] || 0) + 1;
+      }
+      for (var n = 0; n < catBtns.length; n++) {
+        var cat = catBtns[n].dataset.cat;
+        catBtns[n].querySelector('span').textContent = counts[cat] || 0;
+      }
+    })();
+
+    /* ═══════════════════════════════════════════════════════════
+       후기 더보기 / 접기
+       ═══════════════════════════════════════════════════════════ */
+    function toggleReviews(){
+      var g = document.getElementById('reviewGrid');
+      var expanded = g.classList.toggle('reviews-expanded');
+      document.getElementById('moreReviewsBtn').textContent = expanded ? '후기 접기' : '후기 더보기';
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       공지사항 / 배송조회 / 약관 안내
+       ═══════════════════════════════════════════════════════════ */
+    function openNoticeModal(){ openModal('noticeModal'); }
+    function openShipModal(){
+      document.getElementById('shipResult').classList.remove('show');
+      document.getElementById('shipInput').value = '';
+      openModal('shipModal');
+    }
+    function trackShipment(){
+      var v = document.getElementById('shipInput').value.trim();
+      var box = document.getElementById('shipResult');
+      if (!v) { toast('주문번호를 입력해 주세요.'); return; }
+      box.innerHTML = '주문번호 <b>' + v.replace(/[<>&]/g, '') + '</b><br>결제 완료 → 상품 준비 중 → <b>배송 중</b> (내일 도착 예정)';
+      box.classList.add('show');
+    }
+
+
+    /* ═══════════════════════════════════════════════════════════
+       데모 데이터 초기화 — 채점 시 답안 간 데이터 혼선 방지
+       ═══════════════════════════════════════════════════════════ */
+    function resetDemoData(){
+      safeDel('nbo_cart_count');
+      safeDel('nbo_wish');
+      safeDel('nbo_user');
+      safeDel('nbo_coupon');
+      renderCartCount();
+      renderLogin();
+      var hearts = document.querySelectorAll('.heart');
+      for (var i = 0; i < hearts.length; i++) { hearts[i].textContent = '♡'; hearts[i].classList.remove('on'); }
+      toast('데모 데이터를 초기화했습니다.');
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       상세페이지 이동 모달 (비번호 직접 입력)
+       ═══════════════════════════════════════════════════════════ */
+    var bunhoInput = document.getElementById('bunho');
+    bunhoInput.addEventListener('input', updatePreview);
+    bunhoInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') goDetail(); });
+
+    function updatePreview(){
+      var id = normalizeBunho(bunhoInput.value);
+      document.getElementById('idPreview').textContent = id ? buildFilename(id) : '-';
+    }
+
+    function openEntryModal(){
+      bunhoInput.value = '';
+      updatePreview();
+      openModal('entryModal');
+      setTimeout(function(){ bunhoInput.focus(); }, 50);
+    }
+
+    function goDetail(){
+      var id = normalizeBunho(bunhoInput.value);
+      if (!id) { toast('비번호 형식이 올바르지 않습니다. 예: 강원01'); return; }
+      var region = id.slice(0, 2);
+      var num = parseInt(id.slice(2), 10);
+      /* 알려진 시도가 아니거나 인원 범위를 벗어나면 오타 가능성 안내 (이동은 진행) */
+      if (!VENUES[region]) {
+        toast('\'' + region + '\'는 등록된 시도가 아닙니다. 비번호를 확인하세요.');
+        return;
+      }
+      if (num < 1 || num > VENUES[region]) {
+        toast(region + ' 비번호는 01~' + String(VENUES[region]).padStart(2,'0') + ' 범위입니다.');
+        return;
+      }
+      location.href = encodeURI(buildFilename(id));
+    }
+
+    /* 제시 양식(빈 기초 파일) 미리보기 */
+    function openTemplate(){
+      location.href = 'product.html';
+    }
+
+    /* ── 초기 렌더 ── */
+    renderCartCount();
+    renderLogin();
+    applyProductView();
+  </script>
+</body>
+</html>

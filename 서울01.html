@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- [제2과제 문제2] 헤드라인을 아래 <title>에 넣으세요. (예: 헤드라인 | Sleep Lumi) -->
+  <title>잠들기 30분 전, 조도가 먼저 알아챕니다 | Sleep Lumi</title>
+  <meta name="description" content="" />
+  <!--
+    ═══════════════════════════════════════════════════════════════
+    2026 시·도 상업경진대회 [전자상거래실무] 제시 양식
+    ───────────────────────────────────────────────────────────────
+    ◆ 이 파일이 "제시 양식(product.html)"입니다.
+       이 파일을 수정하여 상품 상세페이지를 완성한 뒤,
+       반드시 파일명을 「비번호.html」(예: 강원01.html)로 저장하세요.
+       (파일명이 본인 비번호와 다르면 0점 처리)
+
+    ◆ 메인(main.html) 연동 안내
+       - 로고/메뉴는 main.html로 연결되어 있습니다.
+       - 장바구니 수량은 main.html과 아래 키로 공유됩니다.
+           localStorage 키: "nbo_cart_count" (정수)
+         '장바구니 담기' 기능 구현 시 이 키 값을 증가시키면
+         main.html 헤더의 장바구니 숫자에 반영됩니다.
+
+    ◆ 작성 항목은 [제2과제] 문제지를 참조하세요.
+       (상품 이미지 · 상품명 · 가격 · 수량 · 장바구니/구매/찜 ·
+        상세 콘텐츠 · 필수 정보 · 하단 화면 등)
+    ═══════════════════════════════════════════════════════════════
+  -->
+  <style>
+    /* ── main.html과 동일한 디자인 토큰 (그대로 사용 권장) ── */
+    :root{
+      --black:#111;
+      --gray700:#444;
+      --gray500:#777;
+      --gray300:#d9d9d9;
+      --gray100:#f5f5f5;
+      --white:#fff;
+      --cream:#f7f2ea;
+      --warm:#efe1cd;
+      --amber:#d9903d;
+      --red:#e7472e;
+      --line:#e8e8e8;
+      --shadow:0 18px 45px rgba(0,0,0,.10);
+      --radius:22px;
+      --font:"Pretendard","Malgun Gothic","맑은 고딕","Apple SD Gothic Neo",system-ui,-apple-system,sans-serif;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:var(--font);color:var(--black);background:#fff;letter-spacing:-.025em;line-height:1.55;display:flex;flex-direction:column;min-height:100vh}
+    a{text-decoration:none;color:inherit}
+    button{font:inherit;border:0;background:none;cursor:pointer;color:inherit}
+    .container{width:min(1100px,calc(100% - 40px));margin:auto}
+
+    /* 제시양식 안내 배너 (학생은 이 배너를 지우고 작업하면 됩니다) */
+    .form-banner{height:38px;background:#111;color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center;gap:18px;font-weight:400;padding:0;letter-spacing:normal}
+    .form-banner b{color:#ffd59b;font-weight:700;background:none;padding:0;border-radius:0}
+
+    /* 헤더 (main.html과 동일 톤) */
+    header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
+    .header-main{height:72px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+    .logo{font-size:26px;font-weight:900;letter-spacing:-.07em;cursor:pointer}
+  .header-nav button{cursor:pointer}
+    .logo span{font-size:12px;margin-left:6px;color:var(--amber);letter-spacing:.06em;vertical-align:middle}
+    .header-nav{display:flex;align-items:center;gap:18px;font-size:14px;font-weight:800}
+    .header-nav .icon{position:relative}
+    .header-nav .count{position:absolute;right:-9px;top:-9px;background:#111;color:#fff;border-radius:50%;font-size:10px;min-width:17px;height:17px;padding:0 3px;display:grid;place-items:center}
+
+    main{flex:1}
+    .breadcrumb{font-size:13px;color:var(--gray500);font-weight:600;padding:18px 0 4px}
+
+    /* 학생 작업 영역 placeholder */
+    .work-area{display:grid;place-items:center;min-height:58vh;padding:40px 0}
+    .work-box{border:2px dashed var(--gray300);border-radius:var(--radius);padding:48px 32px;text-align:center;max-width:620px;width:100%}
+    .work-box .badge{display:inline-block;background:var(--gray100);border:1px solid var(--line);color:var(--gray700);font-size:12px;font-weight:900;padding:5px 12px;border-radius:999px;letter-spacing:.04em}
+    .work-box h1{margin-top:16px;font-size:26px;letter-spacing:-.04em}
+    .work-box p{margin-top:10px;color:var(--gray500);font-weight:600;line-height:1.7}
+    .work-box code{background:var(--gray100);border:1px solid var(--line);padding:2px 7px;border-radius:6px;font-size:.92em;font-weight:700}
+
+    /* 푸터 (하단 메뉴·필수 정보는 [문제6]에서 직접 구현) */
+    footer{background:var(--gray100);padding:34px 0;color:var(--gray500);font-size:13px}
+    .footer-note{line-height:1.8;color:#888;font-weight:600}
+
+
+
+    /* 상품 히어로 */
+    .product-hero{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;padding:34px 0 72px}
+    .hero-image{aspect-ratio:1/1;border-radius:var(--radius);background:var(--cream);border:1px solid var(--line);display:grid;place-items:center;text-align:center;color:var(--gray500);font-weight:800;padding:24px}
+    .hero-info h1{font-size:38px;line-height:1.2;letter-spacing:-.05em;margin-bottom:14px}
+    .hero-price{font-size:30px;font-weight:900;margin-bottom:24px}
+    .hero-qty-row{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+    .hero-qty-label{font-size:14px;font-weight:900}
+    .hero-actions{display:grid;grid-template-columns:1fr 1fr 52px;gap:10px;align-items:center}
+    .hero-btn{height:52px;border:1px solid var(--black);border-radius:14px;font-weight:900;background:var(--white)}
+    .hero-btn.buy{background:var(--black);color:var(--white)}
+    .hero-wish{width:52px;height:52px;border:1px solid var(--line);border-radius:50%;background:var(--white);font-size:24px;display:grid;place-items:center}
+
+    /* 상세페이지 본문 */
+    .detail-section{padding:72px 0;border-top:1px solid var(--line)}
+    .detail-section:first-of-type{border-top:0}
+    .section-title{font-size:32px;line-height:1.25;letter-spacing:-.05em;margin-bottom:28px}
+    .section-copy{color:var(--gray700);font-weight:600;line-height:1.85}
+    .small-note{margin-top:16px;color:var(--gray500);font-size:12px;font-weight:600;line-height:1.7}
+    .cards-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+    .info-card{border:1px solid var(--line);border-radius:var(--radius);padding:28px;background:var(--white)}
+    .info-card .emoji{font-size:30px;display:block;margin-bottom:14px}
+    .info-card h3{font-size:19px;margin-bottom:9px;letter-spacing:-.04em}
+    .info-card p{color:var(--gray500);font-size:14px;font-weight:600;line-height:1.75}
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+    .split h3{font-size:25px;margin-bottom:16px;letter-spacing:-.04em}
+    .image-placeholder{aspect-ratio:1/1;border-radius:50%;background:var(--cream);border:1px solid var(--line);display:grid;place-items:center;text-align:center;color:var(--gray500);font-weight:800;padding:24px}
+    .image-placeholder.rect{border-radius:var(--radius);aspect-ratio:4/3;background:var(--warm)}
+    .quote{background:var(--cream);border-left:4px solid var(--amber);padding:20px 22px;border-radius:0 var(--radius) var(--radius) 0;font-weight:800;line-height:1.75;margin-bottom:26px}
+    .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius)}
+    table{width:100%;border-collapse:collapse;min-width:720px;background:var(--white)}
+    th,td{padding:15px 16px;border-bottom:1px solid var(--line);text-align:left;font-size:13px;vertical-align:top}
+    th{background:var(--gray100);font-weight:900}
+    tr:last-child td{border-bottom:0}
+    .badges{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px}
+    .badge-box{border:1px solid var(--line);border-radius:16px;padding:16px;text-align:center;font-size:13px;font-weight:800;background:var(--white)}
+    .stats{background:var(--black);color:var(--white);border-radius:var(--radius);padding:34px}
+    .stats h2{font-size:25px;margin-bottom:24px}
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+    .stat{border-left:1px solid var(--gray500);padding:4px 18px}
+    .stat:first-child{border-left:0}
+    .stat strong{display:block;font-size:30px;color:var(--amber);line-height:1.1;margin-bottom:8px}
+    .stat span{font-size:12px;font-weight:700;line-height:1.5}
+    .review-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+    .review{border:1px solid var(--line);padding:22px;background:#fff}
+    .review.extra{display:none}
+    .reviews-expanded .review.extra{display:block}
+    .stars{font-size:13px;color:var(--amber);font-weight:900}
+    .review p{margin-top:12px;color:#444;font-size:14px}
+    .review b{display:block;margin-top:16px;font-size:13px}
+    .more{font-size:13px;font-weight:800;color:var(--gray500);margin:14px 0 20px}
+    .faq{border-top:1px solid var(--line)}
+    .faq-item{padding:22px 0;border-bottom:1px solid var(--line)}
+    .faq-item h3{font-size:17px;margin-bottom:9px}
+    .faq-item p{color:var(--gray500);font-weight:600;line-height:1.75}
+    .cta{background:var(--cream);border-radius:var(--radius);padding:44px;text-align:center}
+    .cta .price{margin:20px 0 12px;font-size:30px;font-weight:900}
+    .cta del{font-size:16px;color:var(--gray500);margin-right:8px}
+    .discount{font-size:13px;color:var(--red);font-weight:900;margin-left:7px}
+    .qty-row{display:flex;justify-content:center;align-items:center;gap:18px;margin:22px 0}
+    .qty-control{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--white)}
+    .qty-control button{width:42px;height:42px;font-size:20px}
+    .qty-control input{width:48px;border:0;text-align:center;font-weight:900;background:var(--white);color:var(--black)}
+    .total{font-weight:900}
+    .cta-buttons{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:650px;margin:0 auto}
+    .cta-btn{padding:16px;border-radius:14px;font-weight:900;border:1px solid var(--black)}
+    .cta-btn.primary{background:var(--black);color:var(--white)}
+    .cta-btn.secondary{background:var(--white);color:var(--black)}
+    .guarantees{display:flex;justify-content:center;gap:18px;flex-wrap:wrap;margin-top:18px;color:var(--gray500);font-size:12px;font-weight:800}
+    .customer-banner{background:var(--gray100);border:1px solid var(--line);border-radius:var(--radius);padding:28px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+    .customer-banner strong{font-size:24px}
+    .footer-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:44px}
+    .footer-logo{font-size:24px;font-weight:900;color:var(--black);margin-bottom:14px}
+    .footer-links{display:flex;gap:14px;flex-wrap:wrap;color:var(--black);font-weight:800;margin-bottom:16px}
+    .footer-business,.footer-guide{line-height:1.9;font-weight:600}
+    .footer-copy{line-height:1.9;font-weight:600;color:var(--gray500);font-size:13px}
+
+    @media(max-width:560px){
+      .container{width:calc(100% - 28px)}
+      .product-hero{grid-template-columns:1fr;gap:26px;padding:26px 0 48px}
+      .hero-info h1{font-size:30px}
+      .hero-actions{grid-template-columns:1fr 1fr 48px}
+      .hero-wish{width:48px;height:48px}
+      .logo{font-size:22px}
+      .detail-section{padding:48px 0}
+      .section-title{font-size:26px}
+      .cards-3,.split,.badges,.stats-grid,.cta-buttons,.footer-grid,.review-grid{grid-template-columns:1fr}
+      .split{gap:26px}
+      .badges{gap:10px}
+      .stats{padding:26px 20px}
+      .stat,.stat:first-child{border-left:0;border-top:1px solid var(--gray500);padding:16px 0}
+      .stat:first-child{border-top:0}
+      .table-wrap{border:0;overflow:visible}
+      table,tbody,tr,th,td{display:block;min-width:0;width:100%}
+      thead{display:none}
+      tr{border:1px solid var(--line);border-radius:14px;margin-bottom:12px;overflow:hidden;background:var(--white)}
+      td{border-bottom:1px solid var(--line)}
+      td:last-child{border-bottom:0}
+      .cta{padding:32px 20px}
+      .customer-banner{display:block}
+      .customer-banner strong{display:block;margin:8px 0}
+    }
+  </style>
+</head>
+<body>
+  <!-- 제시양식 표기 (작업 시작 시 제거 가능) -->
+  <div class="form-banner">신규 회원 가입 즉시 <b>웰컴 쿠폰</b> 증정 · 당일 출고 · 빠른 배송</div>
+
+  <header>
+    <div class="container header-main">
+      <!-- 로고/메인/장바구니: 동작은 학생이 직접 구현하는 항목이므로, 제시 양식에서는 안내만 표시합니다. -->
+      <button type="button" class="logo" onclick="location.href='main.html'">Sleep Lumi <span>STORE</span></button>
+      <nav class="header-nav" aria-label="주요 메뉴">
+        <button type="button" onclick="location.href='main.html'">메인</button>
+        <button type="button" class="icon" onclick="location.href='main.html'">장바구니<span class="count" id="cartCount">0</span></button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <nav class="breadcrumb">홈 / 상품 상세</nav>
+
+    <section class="product-hero" id="productHero">
+      <div class="hero-image"><img src="images/main_hero.png" alt="Sleep Lumi 문라이트 무드램프 메인 이미지" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;"></div>
+      <div class="hero-info">
+        <p class="small-note" style="margin:0 0 8px">잠들기 30분 전, 조도가 먼저 알아챕니다</p>
+        <h1>Sleep Lumi 문라이트 무드램프 ML-200</h1>
+        <p class="section-copy" style="margin-bottom:14px">1800K 웜톤 자동 디밍으로 만드는 나만의 수면 루틴</p>
+        <div class="hero-price"><span class="discount">20%</span> 39,000원 <del style="font-size:16px;color:var(--gray500);margin-left:8px">49,000원</del></div>
+        <div class="hero-qty-row">
+          <span class="hero-qty-label">수량</span>
+          <div class="qty-control">
+            <button type="button" aria-label="수량 줄이기" onclick="var q=document.getElementById('heroQty');q.value=Math.max(1,Number(q.value)-1)">−</button>
+            <input id="heroQty" value="1" readonly aria-label="수량">
+            <button type="button" aria-label="수량 늘리기" onclick="var q=document.getElementById('heroQty');q.value=Number(q.value)+1">+</button>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <button type="button" class="hero-btn" onclick="addToCartCount(Number(document.getElementById('heroQty').value))">장바구니 담기</button>
+          <button type="button" class="hero-btn buy" onclick="addToCartCount(Number(document.getElementById('heroQty').value));alert('결제 페이지로 이동합니다(데모)')">바로 구매하기</button>
+          <button type="button" class="hero-wish" aria-label="찜하기" onclick="this.textContent=this.textContent.trim()==='♡'?'♥':'♡'">♡</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="detail-section">
+      <h2 class="section-title">선택하는 이유 3가지</h2>
+      <div class="cards-3">
+        <article class="info-card"><span class="emoji">🌙</span><h3>1800K 웜톤, 눈부심 없이</h3><p>취침 전 사용해도 부담 없는 무자극 조도로 자연스러운 졸림을 유도합니다.</p></article>
+        <article class="info-card"><span class="emoji">⏱</span><h3>자동 디밍 타이머</h3><p>30분에 걸쳐 서서히 어두워지는 취침 모드로 잠드는 순간까지 함께합니다.</p></article>
+        <article class="info-card"><span class="emoji">🤫</span><h3>무소음 터치리스 조작</h3><p>손짓 한 번으로 밝기 조절, 클릭 소리나 진동 없이 깊은 잠을 방해하지 않습니다.</p></article>
+      </div>
+    </section>
+
+    <section class="detail-section">
+      <h2 class="section-title">자동 디밍, 잠드는 순간까지 함께</h2>
+      <div class="split"><div class="image-placeholder"><img src="images/detail_01_uv.png" alt="터치리스 조작부 클로즈업" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;"></div><div><h3>1800K 웜톤 자동 디밍</h3><p class="section-copy">잠들기 전 스마트폰을 만지지 않아도 됩니다. 손을 가까이 대는 것만으로 밝기가 조절되고, 취침 모드를 켜면 30분에 걸쳐 서서히 빛이 사그라듭니다. 알람 없이도 자연스럽게 잠들 수 있도록 설계했습니다.</p><p class="small-note">※ 시험 기관: 한국건설생활환경시험연구원(KCL) | 인증 번호: CB062-24-1234</p></div></div>
+    </section>
+
+    <section class="detail-section">
+      <h2 class="section-title">소재와 인증까지 확인하세요</h2>
+      <div class="quote">"조명이라도 아이 방에 놓을 거라 소재까지 꼼꼼히 본다"는 고객의 목소리를 반영했습니다.</div>
+      <div class="split">
+        <div class="image-placeholder rect"><img src="images/detail_02_material.png" alt="원목·실리콘 소재 클로즈업" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;"></div>
+        <div><h3>소재와 인증을 직접 확인시켜 드립니다</h3><p class="section-copy">제품에 사용된 원목과 실리콘 소재, LED 모듈의 안전 기준과 동봉되는 시험 성적서를 가까이서 확인할 수 있습니다. 눈에 보이지 않는 부분까지 근거를 남겼습니다.</p></div>
+      </div>
+      <div style="height:32px"></div>
+      <div class="table-wrap"><table><thead><tr><th>부품</th><th>소재</th><th>등급·규격</th><th>안전여부</th></tr></thead><tbody>
+        <tr><td>본체 커버</td><td>원목(오크)</td><td>FSC 인증 원목</td><td>✅ 유해 물질 無</td></tr><tr><td>받침대</td><td>실리콘</td><td>식품용 등급 실리콘</td><td>✅ 유해 물질 無</td></tr><tr><td>LED 모듈</td><td>저전력 LED</td><td>색온도 1800K, KC 인증</td><td>✅ 블루라이트 저감</td></tr><tr><td>전원 케이블</td><td>PVC 피복</td><td>KC 전기용품 안전인증</td><td>✅ 과열 방지 회로</td></tr>
+      </tbody></table></div>
+      <div class="badges"><div class="badge-box">🌿 환경부 저전력 인증</div><div class="badge-box">⚡ KC 전기용품<br>CB062-24-1234</div><div class="badge-box">🔬 KCL 블루라이트 저감<br>시험 완료</div><div class="badge-box">🏅 ISO 9001<br>제조 품질</div></div>
+    </section>
+
+    <section class="detail-section"><h2 class="section-title">눈에도 편안한 선택</h2><div class="split"><div><h3>블루라이트 걱정 없는 조명</h3><p class="section-copy">일반 LED등과 달리 1800K 웜톤 파장만 사용해 블루라이트를 최소화했습니다. 잠들기 전 사용해도 멜라토닌 분비를 방해하지 않도록 설계했습니다.</p><p class="small-note">🔬 KCL 블루라이트 저감 시험 완료 | 일반 백색 LED 대비 블루라이트 78% 저감</p></div><div class="image-placeholder rect"><img src="images/detail_03_package.png" alt="웜톤 조도로 은은하게 밝혀진 침실 분위기" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;"></div></div></section>
+
+    <section class="detail-section">
+      <h2 class="section-title">일반 무드등과는 다릅니다</h2>
+      <div class="split">
+        <div><h3>숫자로 증명하는 눈 편안함</h3><p class="section-copy">그냥 '아늑하다'는 느낌만 내세우는 무드등이 아닙니다. 색온도, 블루라이트 저감 수치, 디밍 속도까지 시험성적서로 증명합니다.</p><p class="small-note">❌ 일반 무드등: 색온도 미표기, 밝기 고정<br>✅ Sleep Lumi: 1800K 표기, 5단계 자동 디밍, KCL 시험성적서 동봉</p></div>
+        <div class="image-placeholder rect"><img src="images/comparison.png" alt="일반 백색 LED등과 Sleep Lumi 웜톤 조도 비교" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;"></div>
+      </div>
+    </section>
+
+    <section class="detail-section"><div class="stats"><h2>🌙 Sleep Lumi 하나로 만드는 변화</h2><div class="stats-grid"><div class="stat"><strong>1800K</strong><span>웜톤 색온도<br>블루라이트 최소화</span></div><div class="stat"><strong>30분</strong><span>자동 디밍 타이머<br>서서히 소등</span></div><div class="stat"><strong>78%</strong><span>블루라이트 저감률<br>KCL 시험 기준</span></div><div class="stat"><strong>5단계</strong><span>밝기 조절<br>터치리스 조작</span></div></div></div></section>
+
+    <section class="detail-section"><h2 class="section-title">설치부터 폐기까지 책임집니다</h2><div class="quote">"조명도 전자제품이라 나중에 버릴 때가 걱정된다"는 고객의 목소리를 반영했습니다. — 고객 A씨</div><div class="cards-3"><article class="info-card"><h3>본체(원목·플라스틱)</h3><p>일반 쓰레기 또는 대형가전 수거 기준에 따라 분리배출</p></article><article class="info-card"><h3>전원 케이블</h3><p>전선류로 분리배출</p></article><article class="info-card"><h3>LED 모듈</h3><p>소형가전 수거함 배출</p></article></div><p class="small-note">※ 분리배출 방법이 변경될 경우 공식 홈페이지에 공지합니다.</p></section>
+
+    <section class="detail-section"><h2 class="section-title">일상 속 모든 순간, 은은하게</h2><div class="image-placeholder rect"><img src="images/usage_scene.png" alt="침실 머리맡에서 사용하는 Sleep Lumi 무드램프" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;"></div><p class="small-note">침실, 서재, 거실까지 — 하루의 끝을 은은하게 밝혀주는 Sleep Lumi.</p><div class="cards-3"><article class="info-card"><span class="emoji">🛏</span><h3>침실에서</h3><p>취침 전 자동 디밍으로 자연스럽게 잠드는 습관을 만듭니다.</p></article><article class="info-card"><span class="emoji">📖</span><h3>서재에서</h3><p>눈부심 없는 웜톤 조명으로 밤늦은 독서도 편안하게.</p></article><article class="info-card"><span class="emoji">🛋</span><h3>거실에서</h3><p>은은한 무드 조명으로 저녁 시간의 분위기를 바꿉니다.</p></article></div></section>
+
+    <section class="detail-section">
+      <h2 class="section-title">Real Review</h2>
+      <p class="section-copy">먼저 구매한 분들의 이야기입니다.</p>
+      <button type="button" class="more" id="moreProductReviewsBtn" onclick="toggleProductReviews()">후기 더보기</button>
+      <div class="review-grid" id="productReviewGrid">
+        <div class="review"><div class="stars">★★★★★</div><p>주문 다음 날 바로 도착했어요. 포장이 꼼꼼해서 선물용으로도 안심하고 보낼 수 있을 것 같습니다.</p><b>김** · 배송 만족</b></div>
+        <div class="review"><div class="stars">★★★★★</div><p>사진보다 실물 마감이 더 좋습니다. 문의 남겼을 때 답변도 빨라서 믿음이 갔어요.</p><b>이** · 상품 품질</b></div>
+        <div class="review"><div class="stars">★★★★☆</div><p>선물 포장 옵션이 깔끔해서 집들이 선물로 좋았습니다. 가격도 부담 없어요.</p><b>박** · 선물 구매</b></div>
+        <div class="review"><div class="stars">★★★★★</div><p>교환 문의를 드렸는데 처리가 빨랐습니다. 다음에도 여기서 구매할 생각입니다.</p><b>최** · 고객 응대</b></div>
+      </div>
+    </section>
+
+    <section class="detail-section"><h2 class="section-title">자주 묻는 질문</h2><div class="faq"><div class="faq-item"><h3>Q1. 색온도가 정말 1800K인지 어떻게 확인하나요?</h3><p>A1. 제품 하단에 색온도가 각인되어 있으며, 시험 성적서 사본이 함께 동봉됩니다.</p></div><div class="faq-item"><h3>Q2. 자동 디밍 시간을 조절할 수 있나요?</h3><p>A2. 기본은 30분이며, 터치리스 조작으로 15분/30분/60분 중 선택할 수 있습니다.</p></div></div></section>
+
+    <section class="detail-section"><h2 class="section-title">상품 정보 제공 고시</h2><p class="section-copy" style="margin-bottom:20px">전자상거래 등에서의 소비자보호에 관한 법률 제13조 및 동법 시행규칙 제21조에 따른 상품 정보</p><div class="table-wrap"><table><thead><tr><th>항목</th><th>내용</th></tr></thead><tbody><tr><td>품명 및 모델명</td><td>Sleep Lumi 문라이트 무드램프 (ML-200)</td></tr><tr><td>재질</td><td>본체–원목(오크), 받침대–식품용 실리콘, LED 모듈–저전력 LED</td></tr><tr><td>정격전압/소비전력</td><td>AC 220V / 5W</td></tr><tr><td>색온도</td><td>1800K (웜톤)</td></tr><tr><td>제조국</td><td>대한민국</td></tr><tr><td>제조자(수입자)</td><td>㈜엔비오</td></tr><tr><td>A/S 책임자 및 전화번호</td><td>㈜엔비오 고객센터, 1588-0000</td></tr><tr><td>제조년월</td><td>2025년 1월 이후 제조</td></tr><tr><td>품질보증기준</td><td>관련법령 및 소비자분쟁해결기준에 따름 (구매일로부터 1년)</td></tr><tr><td>KC 인증번호</td><td>CB062-24-1234 (전기용품 안전인증)</td></tr><tr><td>청약철회 가능여부</td><td>수령 후 7일 이내 가능 (단, 사용·개봉으로 가치 훼손 시 불가)</td></tr><tr><td>소비자상담 전화번호</td><td>1588-0000 / help@nbo.com</td></tr></tbody></table></div></section>
+
+    <section class="detail-section"><h2 class="section-title">배송·교환·반품 안내</h2><div class="cards-3"><article class="info-card"><span class="emoji">📦</span><h3>배송안내</h3><p>배송비 3,000원(3만원 이상 무료)<br>도서산간 추가배송비 3,000원<br>결제일로부터 2~3영업일 발송<br>택배사: CJ대한통운</p></article><article class="info-card"><span class="emoji">🔄</span><h3>교환·반품</h3><p>수령 후 7일 이내 가능<br>단순변심 왕복배송비 6,000원 고객부담<br>불량·오배송 배송비 무료 전액환불<br>30일 사용 후 불만족 시 100% 무료반품</p></article><article class="info-card"><span class="emoji">❌</span><h3>반품불가사유</h3><p>포장개봉·사용으로 가치훼손 시<br>구성품(충전패드, 매뉴얼 등) 누락<br>고객부주의로 인한 파손·오염<br>수령일 7일 초과(30일 보장 제외)</p></article></div></section>
+
+    <section class="detail-section"><div class="customer-banner"><div><h2>고객센터 안내</h2><strong>☎ 1588-0000</strong></div><div><p>평일 09:00~18:00(주말·공휴일 휴무)</p><p>이메일: help@nbo.com | 카카오톡: @sleeplumi</p></div></div></section>
+
+    <section class="detail-section"><div class="cta"><h2 class="section-title" style="margin-bottom:12px">지금 바로 편안한 잠을 시작하세요</h2><p class="section-copy">스마트폰 대신 조명을 켜고, 자연스럽게 잠드는 습관을 만들어보세요.</p><div class="price"><span class="discount">20%</span> 39,000원 <del>49,000원</del></div><div class="qty-row"><div class="qty-control"><button type="button" aria-label="수량 줄이기" onclick="var q=document.getElementById('ctaQty');q.value=Math.max(1,Number(q.value)-1);document.getElementById('ctaTotal').textContent=(39000*Number(q.value)).toLocaleString()+'원'">−</button><input id="ctaQty" value="1" readonly aria-label="수량"><button type="button" aria-label="수량 늘리기" onclick="var q=document.getElementById('ctaQty');q.value=Number(q.value)+1;document.getElementById('ctaTotal').textContent=(39000*Number(q.value)).toLocaleString()+'원'">+</button></div><span class="total">총액 <span id="ctaTotal">39,000원</span></span></div><div class="cta-buttons"><button type="button" class="cta-btn primary" onclick="addToCartCount(Number(document.getElementById('ctaQty').value))">🌱 바로 구매하기</button><button type="button" class="cta-btn secondary" onclick="addToCartCount(Number(document.getElementById('ctaQty').value))">🛒 장바구니 담기</button></div><div class="guarantees"><span>✓ 30일 무료 반품 보장</span><span>✓ 3만원 이상 무료배송</span><span>✓ KC 인증 제품</span><span>✓ 국내 AS 보장 1년</span></div></div></section>
+  </main>
+
+  <footer>
+    <div class="container footer-grid">
+      <div><div class="footer-logo">Sleep Lumi</div><div class="footer-links"><a href="#">개인정보처리방침</a><a href="#">이용약관</a><a href="#">상품정보고시</a><a href="#">교환·반품</a></div><p class="footer-business">상호 ㈜엔비오 | 대표 NBO / 사업자등록번호 123-45-67890 / 통신판매업신고 2024-서울-00111 / 주소 서울시 강남구 언주로 723 / 이메일 help@nbo.com | 고객센터 1588-0000 / 개인정보 보호책임자 NBO</p></div>
+      <div><p class="footer-copy">Copyright ⓒ ㈜엔비오. All rights reserved.</p>
+      <p class="footer-guide">본 쇼핑몰은 전자상거래 등에서의 소비자보호에 관한 법률을 준수합니다. 모든 거래는 소비자분쟁해결기준에 따라 처리됩니다. 결제·개인정보 관련 문의: help@nbo.com 평일 09:00~18:00 운영(주말·공휴일 휴무)</p></div>
+    </div>
+  </footer>
+
+  <script>
+    'use strict';
+    function toggleProductReviews(){
+      var g = document.getElementById('productReviewGrid');
+      var expanded = g.classList.toggle('reviews-expanded');
+      document.getElementById('moreProductReviewsBtn').textContent = expanded ? '후기 접기' : '후기 더보기';
+    }
+
+    function renderCartBadge(){
+      var count = 0;
+      try {
+        count = parseInt(localStorage.getItem('nbo_cart_count'), 10) || 0;
+      } catch (e) {
+        count = 0;
+      }
+      document.getElementById('cartCount').textContent = count;
+    }
+
+    function addToCartCount(qty){
+      try {
+        var current = parseInt(localStorage.getItem('nbo_cart_count'), 10) || 0;
+        localStorage.setItem('nbo_cart_count', String(current + qty));
+      } catch (e) {
+        /* 저장소 접근이 차단된 환경에서는 저장하지 않음 */
+      }
+      renderCartBadge();
+    }
+
+    renderCartBadge();
+  </script>
+</body>
+</html>
